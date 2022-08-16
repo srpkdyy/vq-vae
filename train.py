@@ -78,7 +78,7 @@ if __name__ == '__main__':
     parser.add_argument('--img-size', type=int, default=64)
     parser.add_argument('--log-interval', type=int, default=5)
 
-    os.makedirs('log')
+    os.makedirs('log', exist_ok=True)
     
     main(parser.parse_args())
 
