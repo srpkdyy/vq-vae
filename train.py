@@ -44,7 +44,7 @@ def main(args):
         model.train()
         train_loss = 0
 
-        for img, _ in enumerate(dataloader):
+        for img, _ in dataloader:
             img = img.to(device)
 
             out, emb_loss = model(img)
