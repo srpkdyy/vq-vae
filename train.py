@@ -58,10 +58,10 @@ def main(args):
             train_loss += loss.detach() * img.shape[0]
 
         print(f'Epoch:{e}, Loss: {l/n}({l}/{n})'.format(
-            e=epoch, l=train_loss, n=len(dataloader.dataset))
+            e=epoch, l=train_loss, n=len(dataloader.dataset)))
 
         if i % args.log_interval == 0:
-            utils.save_img(
+            utils.save_image(
                 torch.cat([img, out], 0),
                 f'log/recon{str(epoch+1).zfill(4)}.png',
                 range=(-1, 1)
