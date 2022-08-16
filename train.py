@@ -57,7 +57,7 @@ def main(args):
 
             train_loss += loss.detach() * img.shape[0]
 
-        print(f'Epoch:{e}, Loss: {l/n}({l}/{n})'.format(
+        print('Epoch:{e}, Loss: {l/n}({l}/{n})'.format(
             e=epoch, l=train_loss, n=len(dataloader.dataset)))
 
         if i % args.log_interval == 0:
