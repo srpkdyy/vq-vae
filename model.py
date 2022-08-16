@@ -130,7 +130,7 @@ class VQ_VAE(nn.Module):
 
         zq = self.upsample(zq)
         recon_x = self.decoder(zq)
-        return recon_x, emb_loss, perplexity
+        return recon_x, emb_loss
 
         
 if __name__ == '__main__':
