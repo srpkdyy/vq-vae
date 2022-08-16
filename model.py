@@ -119,7 +119,7 @@ class VQ_VAE(nn.Module):
 
         self.quantizer = VectorQuantizer(n_emb, emb_dim, beta, device)
 
-        self.upsample = nn.ConvTranspose2d(h_dim, h_dim, 3, 1, padding=1),
+        self.upsample = nn.ConvTranspose2d(h_dim, h_dim, 3, 1, padding=1)
         self.decoder = Decoder(h_dim, n_channels, n_res_blocks, res_dim)
 
     def forward(self, x):
