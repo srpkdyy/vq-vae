@@ -35,9 +35,9 @@ def main(args):
         drop_last=True
     )
 
-    model = VQ_VAE().to(device)
+    model = VQ_VAE(device=device).to(device)
 
-    recon_loss = nn.MSELoss(device=device).to(device)
+    recon_loss = nn.MSELoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     for epoch in range(args.epoch):
