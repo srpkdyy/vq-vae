@@ -6,6 +6,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms as TF
 from torchvision import utils, datasets
+from accelerate import Accelerator
 
 from model import VQ_VAE
 
@@ -16,7 +17,8 @@ torch.backends.cudnn.benchmark = True
 
 
 def main(args):
-    device = 'cuda'
+    accelerator = Accelerator()
+    device = accelerator.device
 
     transform = TF.Compose([
         TF.Resize(args.img_size),
@@ -26,8 +28,14 @@ def main(args):
         ]
     )
 
+    ds = datasets.STL10(
+        args.path,
+        split='unlabeled',
+        transform=transform
+    )
     dataloader = DataLoader(
-        datasets.ImageFolder(args.path, transform=transform),
+        ds,
+        #datasets.ImageFolder(args.path, transform=transform),
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=4,
@@ -35,13 +43,21 @@ def main(args):
         drop_last=True
     )
 
+    accelerator.print(f'Dataset length: {len(dataloader.dataset)}')
+
     model = VQ_VAE(device=device).to(device)
 
     recon_loss = nn.MSELoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
+    dataloader, model, optimizer = accelerator.prepare(
+        dataloader, model, optimizer
+    )
+
     for epoch in range(args.epoch):
         model.train()
+
+        n = 0
         train_loss = 0
 
         for img, _ in dataloader:
@@ -52,21 +68,30 @@ def main(args):
             loss = recon_loss(img, out) + emb_loss
 
             optimizer.zero_grad()
-            loss.backward()
+            accelerator.backward(loss)
             optimizer.step()
 
+            n += img.shape[0]
             train_loss += loss.detach() * img.shape[0]
 
-        print('Epoch:{e}, Loss: {l/n}({l}/{n})'.format(
-            e=epoch, l=train_loss, n=len(dataloader.dataset)))
+        train_loss /= n
+        train_loss = accelerator.gather(train_loss)
 
-        if i % args.log_interval == 0:
+        accelerator.print(f'Epoch:{epoch+1}, Loss:{train_loss.sum().float()}')
+
+        if accelerator.is_local_main_process and epoch % args.log_interval == 0:
             utils.save_image(
-                torch.cat([img, out], 0),
+                torch.cat([img[:8], out[:8]], 0),
                 f'log/recon{str(epoch+1).zfill(4)}.png',
-                range=(-1, 1)
+                normalize=True,
+                value_range=(-1, 1)
             )
 
+    accelerator.wait_for_everyone()
+    accelerator.save(
+        accelerator.unwrap_model(model).state_dict(),
+        os.path.join(args.log_dir, 'latest.pth')
+    )
 
 
 if __name__ == '__main__':
@@ -77,8 +102,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=3e-4)
     parser.add_argument('--img-size', type=int, default=64)
     parser.add_argument('--log-interval', type=int, default=5)
+    parser.add_argument('--log-dir', type=str, default='log')
+    args = parser.parse_args()
 
-    os.makedirs('log', exist_ok=True)
+    os.makedirs(args.log_dir, exist_ok=True)
     
-    main(parser.parse_args())
+    main(args)
 
