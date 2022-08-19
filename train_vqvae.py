@@ -65,7 +65,7 @@ def main(args):
 
             out, emb_loss = model(img)
 
-            loss = recon_loss(img, out) + emb_loss
+            loss = recon_loss(img, out) + 0.5 * emb_loss
 
             optimizer.zero_grad()
             accelerator.backward(loss)
@@ -97,7 +97,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
-    parser.add_argument('-b', '--batch-size', type=int, default=128)
+    parser.add_argument('-b', '--batch-size', type=int, default=256)
     parser.add_argument('-e', '--epoch', type=int, default=500)
     parser.add_argument('--lr', type=float, default=3e-4)
     parser.add_argument('--img-size', type=int, default=64)
