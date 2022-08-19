@@ -139,6 +139,13 @@ class VQ_VAE(nn.Module):
         *_, idx = self.quantizer(z)
         return idx
 
+    def decode_code(self, code):
+        zq = self.quantizer.emb(code)
+        zq = zq.permute(0, 3, 1, 2)
+        zq = self.upsample(zq)
+        x = self.decoder(zq)
+        return x
+
         
 if __name__ == '__main__':
     imgs = torch.rand(128, 3, 64, 64).cuda()

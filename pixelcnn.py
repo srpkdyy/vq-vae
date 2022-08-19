@@ -30,7 +30,7 @@ class MaskedConv2d(nn.Conv2d):
 
 
 class PixelCNN(nn.Module):
-    def __init__(self, n_hidden=32, n_out=256, n_layers=7):
+    def __init__(self, n_hidden=64, n_out=512, n_layers=7):
         super().__init__()
         self.layers = nn.ModuleList()
 
@@ -65,4 +65,23 @@ class PixelCNN(nn.Module):
         for layer in self.layers:
             out = layer(out)
         return out
+
+    def sample(self, size, n_samples):
+        device = next(self.parameters()).device
+        x = torch.zeros(
+            (n_samples, size, size),
+            dtype=torch.int64,
+            device=device)
+
+        for i in range(size):
+            for j in range(size):
+                out = self.forward(x)
+                probs = F.softmax(out[:, :, i, j], 1)
+                x.data[:, i, j].copy_(
+                    probs.multinomial(1).squeeze().data
+                )
+
+        return x
+
+
 
