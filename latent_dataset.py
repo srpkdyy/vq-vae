@@ -66,7 +66,7 @@ def save_latent(args):
 
 if __name__ == '__main__':
     import argparse
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
     parser.add_argument('-b', '--batch-size', type=int, default=1024)
     parser.add_argument('--img-size', type=int, default=64)
