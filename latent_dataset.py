@@ -12,7 +12,7 @@ torch.backends.cudnn.benchmark=True
 
 
 
-if __name__ == '__main__':
+def save_latent(args):
     accelerator = Accelerator()
     device = accelerator.device
 
@@ -62,4 +62,16 @@ if __name__ == '__main__':
     emb_idx = torch.cat(emb_idx)
     print(emb_idx.shape)
     torch.save(emb_idx, 'latent_data.pth')
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = ArgumentParser()
+    parser.add_argument('path', type=str)
+    parser.add_argument('-b', '--batch-size', type=int, default=1024)
+    parser.add_argument('--img-size', type=int, default=64)
+    parser.add_argument('--log-dir', type=str, default='log')
+    args = parser.parse_args()
+
+    save_latent(args)
 
