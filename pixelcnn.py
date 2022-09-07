@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
-import torch.nn.functioinal as F
+import torch.nn.functional as F
 
 
 def init_weights(m):
     if isinstance(m, nn.Conv2d):
         nn.init.xavier_uniform_(m.weight.data)
-        m.bias.data.fill_(0)
+        if m.bias is not None:
+            m.bias.data.fill_(0)
 
 
 class MaskedConv2d(nn.Conv2d):
@@ -32,10 +33,12 @@ class MaskedConv2d(nn.Conv2d):
 class PixelCNN(nn.Module):
     def __init__(self, n_hidden=64, n_out=512, n_layers=7):
         super().__init__()
+        self.n_class = n_out
+
         self.layers = nn.ModuleList()
 
         self.layers.append(MaskedConv2d(mask_type='A',
-                                        in_channels=1,
+                                        in_channels=n_out,
                                         out_channels=n_hidden,
                                         kernel_size=7,
                                         stride=1,
@@ -61,7 +64,7 @@ class PixelCNN(nn.Module):
 
 
     def forward(self, x):
-        out = x
+        out = F.one_hot(x, self.n_class).permute(0, 3, 1, 2).float()
         for layer in self.layers:
             out = layer(out)
         return out
@@ -80,8 +83,5 @@ class PixelCNN(nn.Module):
                 x.data[:, i, j].copy_(
                     probs.multinomial(1).squeeze().data
                 )
-
         return x
-
-
 

@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from accelerate import Accelerator
 from torchvision import transforms as T
 from torchvision import datasets
+from tqdm import tqdm
 
 from vqvae import VQ_VAE
 
@@ -44,14 +45,16 @@ def save_latent(args):
         dataloader, model
     )
 
-    weight = accelerator.load('log/latest.pth')
+    weight = torch.load('log/latest.pth')
     accelerator.unwrap_model(model).load_state_dict(weight)
     model.eval()
 
     emb_idx = []
     size = args.img_size // 4
 
-    for img, _ in dataloader:
+    pbar = tqdm(dataloader, disable=not accelerator.is_local_main_process)
+
+    for img, _ in pbar:
         img = img.to(device)
 
         idx = model.get_codebook(img)

@@ -8,7 +8,7 @@ from torchvision import transforms as TF
 from torchvision import utils, datasets
 from accelerate import Accelerator
 
-from model import VQ_VAE
+from vqvae import VQ_VAE
 
 
 
@@ -49,12 +49,14 @@ def main(args):
 
     recon_loss = nn.MSELoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [args.epoch//2, 3*args.epoch//4], 0.1)
+
 
     dataloader, model, optimizer = accelerator.prepare(
-        dataloader, model, optimizer
+        dataloader, model, optimizer, scheduler
     )
 
-    for epoch in range(args.epoch):
+    for epoch in range(1, args.epoch+1):
         model.train()
 
         n = 0
@@ -77,15 +79,23 @@ def main(args):
         train_loss /= n
         train_loss = accelerator.gather(train_loss)
 
-        accelerator.print(f'Epoch:{epoch+1}, Loss:{train_loss.sum().float()}')
+        accelerator.print(f'Epoch:{epoch}, Loss:{train_loss.sum().float()}')
 
         if accelerator.is_local_main_process and epoch % args.log_interval == 0:
             utils.save_image(
-                torch.cat([img[:8], out[:8]], 0),
-                f'log/recon{str(epoch+1).zfill(4)}.png',
+                torch.cat([
+                    img[0:4],
+                    out[0:4],
+                    img[4:8],
+                    out[4:8]
+                ]),
+                f'{args.log_dir}/recon{str(epoch).zfill(4)}.png',
+                nrow=4,
                 normalize=True,
                 value_range=(-1, 1)
             )
+
+        scheduler.step()
 
     accelerator.wait_for_everyone()
     accelerator.save(
@@ -97,11 +107,11 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str)
-    parser.add_argument('-b', '--batch-size', type=int, default=256)
-    parser.add_argument('-e', '--epoch', type=int, default=500)
-    parser.add_argument('--lr', type=float, default=3e-4)
+    parser.add_argument('-b', '--batch-size', type=int, default=4096)
+    parser.add_argument('-e', '--epoch', type=int, default=2000)
+    parser.add_argument('--lr', type=float, default=5e-3)
     parser.add_argument('--img-size', type=int, default=64)
-    parser.add_argument('--log-interval', type=int, default=5)
+    parser.add_argument('--log-interval', type=int, default=20)
     parser.add_argument('--log-dir', type=str, default='log')
     args = parser.parse_args()
 

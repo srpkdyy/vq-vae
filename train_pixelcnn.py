@@ -8,6 +8,7 @@ from torchvision import transforms as TF
 from torchvision import utils, datasets
 from accelerate import Accelerator
 
+from vqvae import VQ_VAE
 from pixelcnn import PixelCNN
 
 
@@ -20,7 +21,7 @@ def main(args):
     accelerator = Accelerator()
     device = accelerator.device
 
-    ds = TensorDataset(torch.load('latent_data'))
+    ds = TensorDataset(torch.load('latent_data.pth'))
 
     dataloader = DataLoader(
         ds,
@@ -48,6 +49,7 @@ def main(args):
         dataloader, model, optimizer
     )
 
+    accelerator.print('Start training...')
     for epoch in range(args.epoch):
         model.train()
 
@@ -55,7 +57,7 @@ def main(args):
         train_loss = 0
 
         for x in dataloader:
-            x = x.to(device)
+            x = x[0].to(device)
             target = x
 
             out = model(x)
@@ -75,7 +77,7 @@ def main(args):
         accelerator.print(f'Epoch:{epoch+1}, Loss:{train_loss.sum().float()}')
 
         if accelerator.is_local_main_process and epoch % args.log_interval == 0:
-            sample = model.sample(args.img_size, 16)
+            sample = accelerator.unwrap_model(model).sample(args.img_size, 16)
 
             imgs = vq_vae.decode_code(sample)
 
@@ -95,12 +97,11 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', type=str)
-    parser.add_argument('-b', '--batch-size', type=int, default=256)
-    parser.add_argument('-e', '--epoch', type=int, default=500)
+    parser.add_argument('-b', '--batch-size', type=int, default=1024)
+    parser.add_argument('-e', '--epoch', type=int, default=1000)
     parser.add_argument('--lr', type=float, default=3e-4)
-    parser.add_argument('--img-size', type=int, default=64)
-    parser.add_argument('--log-interval', type=int, default=5)
+    parser.add_argument('--img-size', type=int, default=16)
+    parser.add_argument('--log-interval', type=int, default=10)
     parser.add_argument('--log-dir', type=str, default='log')
     args = parser.parse_args()
 
